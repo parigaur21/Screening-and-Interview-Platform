@@ -1,0 +1,15 @@
+# Copy this file to terraform.tfvars and fill in your values.
+# Never commit terraform.tfvars (it is in .gitignore).
+
+aws_account_id = "123456789012"   # AWS Console → account ID (12 digits)
+aws_region     = "us-east-1"
+environment    = "production"
+ec2_key_name   = "resuscreen-ssh-key"  # EC2 Key Pair name you created in AWS
+db_password    = "ChangeMeToAStrongPassword!"
+
+# Optional: auto-clone repo and start backend on EC2 boot (public repos only)
+# github_repo_url = "https://github.com/YOUR_USER/YOUR_REPO.git"
+
+# Optional: Route 53 custom domain (requires hosted zone in same account)
+# domain_name       = "app.yourdomain.com"
+# route53_zone_id   = "Z0123456789ABCDEFGHIJ"

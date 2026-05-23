@@ -1,0 +1,48 @@
+# ========================================================
+# GitHub Actions: Backend CI/CD EC2 SSH PM2 Deploy
+# ========================================================
+
+name: Backend Deploy to AWS EC2 Host
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-deploy.yml'
+
+jobs:
+  deploy:
+    name: Deploy to EC2 Virtual Machine
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Pull codebase
+      - name: Checkout Code Repository
+        uses: actions/checkout@v3
+
+      # 2. Deploy on EC2 Host via SSH Commands
+      - name: SSH EC2 Remote Deploy & Restart PM2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST_IP }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            # 1. Navigate to deployment root and fetch latest codebase commits
+            cd /var/www/backend
+            git pull origin master || git pull origin main
+            
+            # 2. Navigate to backend subdirectory, install modules
+            cd backend
+            npm install --only=production
+            
+            # 3. Reload running PM2 API process or initiate boot if crashed
+            pm2 reload server || pm2 start src/server.js --name "server"
+            
+            # 4. Confirm process diagnostics
+            pm2 status
+            echo "🚀 EC2 Node server deployed and restarted successfully!"

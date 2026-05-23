@@ -1,0 +1,63 @@
+# ========================================================
+# GitHub Actions: Frontend CI/CD Static S3 & CloudFront
+# ========================================================
+
+name: Frontend Deploy to AWS S3 & CloudFront CDN
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-deploy.yml'
+
+jobs:
+  deploy:
+    name: Build & Publish Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Pull the codebase
+      - name: Checkout Code Repository
+        uses: actions/checkout@v3
+
+      # 2. Build Vite bundle
+      - name: Initialize Node.js Environment
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: './frontend/package-lock.json'
+
+      - name: Install Frontend Dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Compile Production Bundle
+        env:
+          # Optional override; default uses relative /api via CloudFront → EC2 Nginx
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+        run: |
+          cd frontend
+          npm run build
+
+      # 3. Authenticate with AWS CLI
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      # 4. Upload static assets to S3
+      - name: Sync Static Assets to AWS S3 Bucket
+        run: |
+          aws s3 sync frontend/dist/ s3://${{ secrets.AWS_S3_BUCKET_NAME }} --delete
+
+      # 5. Invalidate CloudFront CDN Cache
+      - name: Invalidate CloudFront Global Cache
+        run: |
+          aws cloudfront create-invalidation --distribution-id ${{ secrets.AWS_CLOUDFRONT_DIST_ID }} --paths "/*"

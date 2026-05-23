@@ -1,0 +1,24 @@
+# ==========================================
+# Stage 1: Build compilation environment
+# ==========================================
+FROM node:18-alpine AS build
+WORKDIR /app
+
+# Install package descriptors
+COPY package*.json ./
+RUN npm ci
+
+# Copy core assets and compile production bundle
+COPY . .
+RUN npm run build
+
+# ==========================================
+# Stage 2: Lightweight production web server
+# ==========================================
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+
+# Expose HTTP Port
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
