@@ -15,11 +15,19 @@ const SKILL_CATALOG = [
  */
 export async function screenResume(resumeText, jobDescription) {
   // If a Gemini API Key is configured, we can implement the real LLM call!
+
   if (process.env.GEMINI_API_KEY) {
     try {
       return await screenResumeWithGemini(resumeText, jobDescription);
     } catch (error) {
-      console.warn('Gemini screening failed, falling back to local parsing:', error.message);
+      console.warn('Gemini screening failed, falling back to OpenAI/local:', error.message);
+    }
+  }
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      return await screenResumeWithOpenAI(resumeText, jobDescription);
+    } catch (error) {
+      console.warn('OpenAI screening failed, falling back to local parsing:', error.message);
     }
   }
 
@@ -107,11 +115,19 @@ export async function screenResume(resumeText, jobDescription) {
  * Generates an interview question based on resume skills and progress.
  */
 export async function generateNextQuestion(candidate, job, prevMessages = [], questionIndex = 0) {
+
   if (process.env.GEMINI_API_KEY) {
     try {
       return await generateNextQuestionWithGemini(candidate, job, prevMessages, questionIndex);
     } catch (error) {
-      console.warn('Gemini question generation failed, falling back to local simulator:', error.message);
+      console.warn('Gemini question generation failed, falling back to OpenAI/local:', error.message);
+    }
+  }
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      return await generateNextQuestionWithOpenAI(candidate, job, prevMessages, questionIndex);
+    } catch (error) {
+      console.warn('OpenAI question generation failed, falling back to local simulator:', error.message);
     }
   }
 
@@ -138,13 +154,89 @@ export async function generateNextQuestion(candidate, job, prevMessages = [], qu
  * Evaluates candidate responses to provide constructive score and review feedback.
  */
 export async function evaluateAnswer(question, answer, candidateSkills = '') {
+
   if (process.env.GEMINI_API_KEY) {
     try {
       return await evaluateAnswerWithGemini(question, answer);
     } catch (error) {
-      console.warn('Gemini answer evaluation failed, falling back to local evaluator:', error.message);
+      console.warn('Gemini answer evaluation failed, falling back to OpenAI/local:', error.message);
     }
   }
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      return await evaluateAnswerWithOpenAI(question, answer, candidateSkills);
+    } catch (error) {
+      console.warn('OpenAI answer evaluation failed, falling back to local evaluator:', error.message);
+    }
+  }
+// ==================== OpenAI API Integrations ====================
+
+async function screenResumeWithOpenAI(resumeText, jobDescription) {
+  const url = 'https://api.openai.com/v1/chat/completions';
+  const prompt = `You are an expert AI Technical Recruiter. Screen the following resume text against the job description.\n\nJob Description:\n${jobDescription}\n\nResume Text:\n${resumeText}\n\nReturn your response strictly in the following JSON format:\n{\n  "skills": "Comma-separated list of top matched technical skills",\n  "experience": "Estimated years of professional experience as an integer",\n  "fitScore": "Matching score between 10 and 100 representing job alignment",\n  "summary": "Concise 3-sentence summary covering background fit, gaps, and recommendations"\n}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: 'gpt-3.5-turbo',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.2
+    })
+  });
+  const data = await response.json();
+  const text = data.choices?.[0]?.message?.content || '{}';
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { summary: text, skills: '', experience: 0, fitScore: 50 };
+  }
+}
+
+async function generateNextQuestionWithOpenAI(candidate, job, prevMessages = [], questionIndex = 0) {
+  const url = 'https://api.openai.com/v1/chat/completions';
+  const prompt = `You are an AI technical interviewer. Given the candidate profile and job description, generate a technical interview question for round ${questionIndex + 1}.\n\nCandidate: ${JSON.stringify(candidate)}\nJob: ${JSON.stringify(job)}\n\nReturn only the question text.`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: 'gpt-3.5-turbo',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.3
+    })
+  });
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || 'Describe a technical challenge you solved.';
+}
+
+async function evaluateAnswerWithOpenAI(question, answer, candidateSkills = '') {
+  const url = 'https://api.openai.com/v1/chat/completions';
+  const prompt = `You are an AI technical interviewer. Given the question, candidate answer, and their skills, provide a JSON with a score (30-98) and a short feedback string.\n\nQuestion: ${question}\nAnswer: ${answer}\nSkills: ${candidateSkills}\n\nReturn JSON: { "score": 0, "feedback": "..." }`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: 'gpt-3.5-turbo',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.2
+    })
+  });
+  const data = await response.json();
+  const text = data.choices?.[0]?.message?.content || '{}';
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { score: 50, feedback: text };
+  }
+}
 
   const ans = answer.toLowerCase();
   let score = 50; // Starting baseline

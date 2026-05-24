@@ -1,3 +1,11 @@
+  const createUsersTable = `
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      username VARCHAR(255) UNIQUE NOT NULL,
+      password VARCHAR(255) NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    );
+  `;
 import pg from 'pg';
 import sqlite3 from 'sqlite3';
 import path from 'path';
@@ -138,13 +146,14 @@ export async function initDatabase() {
 
   try {
     if (isPostgres) {
-      // In PostgreSQL, use SERIAL/TIMESTAMPTZ where appropriate, but standard ANSI works perfectly
+      await pgPool.query(createUsersTable);
       await pgPool.query(createJobsTable);
       await pgPool.query(createCandidatesTable);
       await pgPool.query(createInterviewsTable);
       await pgPool.query(createMessagesTable);
     } else {
       sqliteDb.serialize(() => {
+        sqliteDb.run(createUsersTable);
         sqliteDb.run(createJobsTable);
         sqliteDb.run(createCandidatesTable);
         sqliteDb.run(createInterviewsTable);

@@ -6,6 +6,7 @@ import { initDatabase } from './config/db.js';
 import * as jobController from './controllers/jobController.js';
 import * as candidateController from './controllers/candidateController.js';
 import * as interviewController from './controllers/interviewController.js';
+import authRoutes from './routes/authRoutes.js';
 
 // Load system configuration parameters
 dotenv.config();
@@ -33,6 +34,9 @@ try {
 }
 
 // ==================== API Route Mapping ====================
+
+// 🛡️ Authentication Endpoints
+app.use('/api/auth', authRoutes);
 
 // ⚙️ Telemetry & System Diagnostics Endpoint (Extremely useful for DevOps grading!)
 app.get('/api/health', (req, res) => {

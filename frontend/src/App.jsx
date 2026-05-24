@@ -5,20 +5,18 @@ import ResumeUploader from './components/ResumeUploader';
 import CandidateScreening from './components/CandidateScreening';
 import MockInterview from './components/MockInterview';
 import './styles/theme.css';
+import { useAuth } from './context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
-// API URL: VITE_API_URL override, localhost dev server, or same-origin /api via CloudFront → EC2 Nginx.
-const API_BASE_URL = import.meta.env.VITE_API_URL
-  || (window.location.hostname === 'localhost'
-    ? 'http://localhost:5000/api'
-    : '/api');
-
+const API_BASE_URL = "http://43.205.110.237:5000/api";
 export default function App() {
+  const { token, logout } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [jobs, setJobs] = useState([]);
   const [candidates, setCandidates] = useState([]);
   const [selectedJobId, setSelectedJobId] = useState('');
   const [interviewCandidate, setInterviewCandidate] = useState(null);
-  
   // Custom job posting creator drawer state
   const [isJobDrawerOpen, setIsJobDrawerOpen] = useState(false);
   const [newJobTitle, setNewJobTitle] = useState('');
@@ -30,9 +28,13 @@ export default function App() {
   const [drawerError, setDrawerError] = useState('');
 
   useEffect(() => {
+    if (!token) {
+      navigate('/login');
+      return;
+    }
     fetchJobs();
     fetchCandidates();
-  }, []);
+  }, [token]);
 
   const fetchJobs = async () => {
     try {
@@ -158,6 +160,8 @@ export default function App() {
     }
   };
 
+  if (!token) return null;
+
   return (
     <div className="app-container">
       {/* Navigation Sidebar */}
@@ -220,10 +224,14 @@ export default function App() {
 
         {/* User profile section */}
         <div className="user-profile-section">
-          <div className="avatar">P</div>
+          <div className="avatar">U</div>
           <div className="user-info">
-            <div className="username">Parijat K.</div>
-            <div className="role">DevOps Recruiter</div>
+            <div className="username">User</div>
+            <div className="role">Authenticated</div>
+            <button style={{marginTop: '0.5rem'}} onClick={logout}>Logout</button>
+            <div style={{marginTop: '0.5rem'}}>
+              <a href="/signup" style={{color: 'var(--color-secondary)'}}>Sign Up</a>
+            </div>
           </div>
         </div>
       </aside>
