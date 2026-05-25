@@ -1,17 +1,13 @@
-FROM node:18-alpine
+FROM node:20
+
 WORKDIR /app
 
-# Ingest and cache npm modules
 COPY package*.json ./
-RUN npm ci --only=production
 
-# Copy backend source modules
+RUN npm install
+
 COPY . .
 
-# Expose API runtime port
 EXPOSE 5000
 
-ENV NODE_ENV=production
-
-# Boot server
-CMD ["node", "src/server.js"]
+CMD ["npm", "start"]
