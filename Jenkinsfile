@@ -61,7 +61,7 @@ stages {
             sh '''
                 sleep 10
                 curl -f http://localhost:3000
-                curl -f http://localhost:5000
+                curl -f http://localhost:5000/api
             '''
         }
     }
