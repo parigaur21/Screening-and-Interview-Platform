@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Play, BookOpen, Terminal, CheckCircle2, Award, Sparkles, Clock, ExternalLink, Video, Shield, Activity, Database, Layers, Search, Code, Cpu } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Play, BookOpen, Terminal, CheckCircle2, Award, Sparkles, Clock, ExternalLink, Video, Shield, Activity, Database, Layers, Search, Code, Cpu, Tv, RefreshCw } from 'lucide-react';
 
 const mockVideos = [
   {
@@ -8,6 +8,7 @@ const mockVideos = [
     title: 'Lead DevOps Engineer Mock Interview: Production K8s & IaC Pipeline',
     channel: 'freeCodeCamp',
     embedUrl: 'https://www.youtube.com/embed/scTFi8V7-38',
+    directVideoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
     duration: '42 mins',
     difficulty: 'Advanced',
     icon: Terminal,
@@ -35,6 +36,11 @@ const mockVideos = [
         question: 'What is the purpose of distinguishing between Readiness and Liveness probes in Kubernetes?',
         answer: 'Liveness probes check if the container needs to be restarted (e.g., if the application has deadlocked). Readiness probes check if the container is ready to accept incoming network traffic. If a readiness probe fails, the K8s endpoint controller removes the Pod from the Service load balancer, ensuring zero-downtime deployments while the app warms up.'
       }
+    ],
+    bookmarks: [
+      { label: '00:01 • System Architecture Introduction', time: 1 },
+      { label: '00:05 • Multi-stage Docker Caching Strategy', time: 5 },
+      { label: '00:11 • Kubernetes Ingress & Rolling Update Demo', time: 11 }
     ]
   },
   {
@@ -43,6 +49,7 @@ const mockVideos = [
     title: 'SRE Systems Design Mock Interview: Incident Response & Alerting SLOs',
     channel: 'Exponent SRE',
     embedUrl: 'https://www.youtube.com/embed/b4N82j-w4rE',
+    directVideoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
     duration: '38 mins',
     difficulty: 'Expert',
     icon: Activity,
@@ -70,6 +77,11 @@ const mockVideos = [
         question: 'What is an Error Budget and how do you enforce it?',
         answer: 'An Error Budget is the allowable room for error, defined as 100% minus the SLO (e.g., a 99.9% SLO leaves a 0.1% error budget). We track the burn rate of this budget. If our monitoring indicates that we will deplete the monthly error budget before the period ends, we halt production code pushes and redirect engineering focus to bug remediation, reliability, and test coverage.'
       }
+    ],
+    bookmarks: [
+      { label: '00:01 • Latency Telemetry Incident Triage', time: 1 },
+      { label: '00:04 • Setting SLO Budgets & Prometheus Targets', time: 4 },
+      { label: '00:10 • Writing Blameless Incident Post-Mortems', time: 10 }
     ]
   },
   {
@@ -78,6 +90,7 @@ const mockVideos = [
     title: 'Cloud Architect Mock Interview: High Availability Design & Disaster Recovery',
     channel: 'interviewing.io',
     embedUrl: 'https://www.youtube.com/embed/R3n0j2_YpLw',
+    directVideoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
     duration: '51 mins',
     difficulty: 'Expert',
     icon: Layers,
@@ -105,6 +118,11 @@ const mockVideos = [
         question: 'How do you securely connect multiple remote office networks and several VPCs?',
         answer: 'I would implement AWS Transit Gateway as a centralized network hub. Each VPC and local VPN tunnel connects to the Transit Gateway. By manipulating Transit Gateway Route Tables, we can isolate development environments from production VPCs while maintaining high-speed sharing of core services (like shared Active Directory).'
       }
+    ],
+    bookmarks: [
+      { label: '00:01 • AWS Multi-region VPC Peering Configs', time: 1 },
+      { label: '00:05 • RDS Database Replication Lag Safeguards', time: 5 },
+      { label: '00:10 • Transit Gateway Dynamic Route Tables', time: 10 }
     ]
   },
   {
@@ -113,6 +131,7 @@ const mockVideos = [
     title: 'DevSecOps Mock Interview: Automated Security Scanning & Compliance Gates',
     channel: 'Exponent SecOps',
     embedUrl: 'https://www.youtube.com/embed/0k5G6F684sE',
+    directVideoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
     duration: '29 mins',
     difficulty: 'Advanced',
     icon: Shield,
@@ -140,6 +159,11 @@ const mockVideos = [
         question: 'How do you securely manage database credentials in a highly auto-scaled Kubernetes cluster?',
         answer: 'We utilize HashiCorp Vault with Kubernetes Auth. Pods are assigned specific Kubernetes Service Accounts. Using a Vault Sidecar Agent injected into the Pod, the application requests dynamic database credentials which are generated on-the-fly with short time-to-lives (e.g., 1 hour) and are automatically rotated. No raw secrets are stored in YAML manifests or Git.'
       }
+    ],
+    bookmarks: [
+      { label: '00:01 • Static Source Vulnerability Scanning Gates', time: 1 },
+      { label: '00:04 • Eliminating Git History Hardcoded Secrets', time: 4 },
+      { label: '00:09 • HashiCorp Vault Dynamic Tokens Deployment', time: 9 }
     ]
   },
   {
@@ -148,6 +172,7 @@ const mockVideos = [
     title: 'Frontend Platform Mock Interview: Monorepo Orchestration & Module Federation',
     channel: 'Exponent Frontend',
     embedUrl: 'https://www.youtube.com/embed/G30tX9XJ4Fk',
+    directVideoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
     duration: '45 mins',
     difficulty: 'Advanced',
     icon: Code,
@@ -175,6 +200,11 @@ const mockVideos = [
         question: 'How do you optimize Core Web Vitals, specifically Largest Contentful Paint (LCP) in a high-traffic app?',
         answer: 'We implement server-side rendering (SSR) or static site generation with edge rendering. We optimize images through next-gen formats (AVIF/WebP) and ensure the hero image is preloaded (`rel="preload"`). We remove render-blocking Javascript, defer non-critical CSS, and utilize responsive layouts to eliminate layout shifts (CLS).'
       }
+    ],
+    bookmarks: [
+      { label: '00:01 • Monorepo Shared Package Cache Sync', time: 1 },
+      { label: '00:04 • Webpack Remote Federated Component Loading', time: 4 },
+      { label: '00:10 • Largest Contentful Paint Layout Shift Fixes', time: 10 }
     ]
   },
   {
@@ -183,6 +213,7 @@ const mockVideos = [
     title: 'Data Platform Engineer Mock Interview: Kafka Streaming & dbt Data Modeling',
     channel: 'Google ML Systems',
     embedUrl: 'https://www.youtube.com/embed/U6_g-N00D_k',
+    directVideoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutback.mp4',
     duration: '36 mins',
     difficulty: 'Expert',
     icon: Database,
@@ -210,6 +241,11 @@ const mockVideos = [
         question: 'How do you manage staging vs production data isolation when modeling with dbt?',
         answer: 'We leverage dbt environment profiles. In development, target schemas are generated dynamically based on the developer\'s username (e.g., dbt_jdoe). In production, dbt compile and run are executed by the Orchestrator (Airflow/Prefect) which points to production datasets inside Snowflake, isolating the staging warehouses completely from dev queries.'
       }
+    ],
+    bookmarks: [
+      { label: '00:01 • High-velocity Event Partition Indexes', time: 1 },
+      { label: '00:06 • Schema Registry Evolution Protection Gates', time: 6 },
+      { label: '00:11 • Modular staging.stg Warehouse Ref Mapping', time: 11 }
     ]
   }
 ];
@@ -219,7 +255,9 @@ export default function PrepVideos() {
   const [activeVideo, setActiveVideo] = useState(mockVideos[0]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeAccordion, setActiveAccordion] = useState(0);
+  const [useDirectPlayer, setUseDirectPlayer] = useState(true);
 
+  const videoRef = useRef(null);
   const roles = ['All', ...new Set(mockVideos.map(v => v.role))];
 
   const filteredVideos = mockVideos.filter(video => {
@@ -229,7 +267,12 @@ export default function PrepVideos() {
     return matchesRole && matchesSearch;
   });
 
-  const VideoIcon = activeVideo.icon;
+  const handleJumpToBookmark = (timeInSeconds) => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = timeInSeconds;
+      videoRef.current.play();
+    }
+  };
 
   return (
     <div style={{ animation: 'fadeIn 0.4s ease-out' }}>
@@ -240,7 +283,7 @@ export default function PrepVideos() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(99, 102, 241, 0.1)', padding: '0.5rem 1rem', borderRadius: 'var(--radius-md)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
           <Sparkles size={16} style={{ color: 'var(--color-secondary)', animation: 'pulse 2s infinite' }} />
-          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)' }}>Expert Preparations Added</span>
+          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)' }}>Expert Preparations Active</span>
         </div>
       </div>
 
@@ -250,7 +293,12 @@ export default function PrepVideos() {
           {roles.map(role => (
             <button
               key={role}
-              onClick={() => setSelectedRole(role)}
+              onClick={() => {
+                const found = mockVideos.find(v => v.role === role) || mockVideos[0];
+                setSelectedRole(role);
+                setActiveVideo(found);
+                setActiveAccordion(0);
+              }}
               className="btn"
               style={{
                 fontSize: '0.75rem',
@@ -344,24 +392,121 @@ export default function PrepVideos() {
         {/* Right Side: High-Fidelity Active Player & Notes Panel */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
-          {/* Stunning Glass Card with Framed YouTube Video Embed */}
+          {/* Stunning Glass Card with Framed Video */}
           <div className="glass-card" style={{ padding: '1.25rem', overflow: 'hidden' }}>
-            <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border-glass)', background: '#000' }}>
-              <iframe
-                src={activeVideo.embedUrl}
-                title={activeVideo.title}
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '100%'
-                }}
-              />
+            
+            {/* Direct Player vs YouTube Embed Selector tabs */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border-glass)', paddingBottom: '0.75rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  onClick={() => setUseDirectPlayer(true)}
+                  className="btn"
+                  style={{
+                    fontSize: '0.7rem',
+                    padding: '0.35rem 0.75rem',
+                    background: useDirectPlayer ? 'rgba(6, 182, 212, 0.12)' : 'rgba(255,255,255,0.02)',
+                    borderColor: useDirectPlayer ? 'var(--color-secondary)' : 'var(--border-glass)',
+                    color: useDirectPlayer ? 'var(--color-secondary)' : 'var(--text-muted)',
+                    borderRadius: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem'
+                  }}
+                >
+                  <Cpu size={14} /> ⚡ Play Inline Here (Direct CDN)
+                </button>
+                <button
+                  onClick={() => setUseDirectPlayer(false)}
+                  className="btn"
+                  style={{
+                    fontSize: '0.7rem',
+                    padding: '0.35rem 0.75rem',
+                    background: !useDirectPlayer ? 'rgba(99, 102, 241, 0.12)' : 'rgba(255,255,255,0.02)',
+                    borderColor: !useDirectPlayer ? 'var(--color-primary)' : 'var(--border-glass)',
+                    color: !useDirectPlayer ? 'var(--color-primary)' : 'var(--text-muted)',
+                    borderRadius: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem'
+                  }}
+                >
+                  <Tv size={14} /> 📺 YouTube Player Mode
+                </button>
+              </div>
+              
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontWeight: 600 }}>
+                {useDirectPlayer ? '🚀 Zero Redirects Stream active' : '📢 Custom IFrame active'}
+              </span>
             </div>
+
+            <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border-glass)', background: '#000' }}>
+              {useDirectPlayer ? (
+                /* Native HTML5 Player that allows zero redirect inline playing */
+                <video
+                  ref={videoRef}
+                  src={activeVideo.directVideoUrl}
+                  controls
+                  autoPlay
+                  muted
+                  playsInline
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover'
+                  }}
+                />
+              ) : (
+                /* YouTube IFrame Embed fallback */
+                <iframe
+                  src={activeVideo.embedUrl}
+                  title={activeVideo.title}
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%'
+                  }}
+                />
+              )}
+            </div>
+
+            {/* Timestamps / Section Jump Links for Inline Video Player */}
+            {useDirectPlayer && activeVideo.bookmarks && (
+              <div style={{ marginTop: '0.85rem', background: 'rgba(255, 255, 255, 0.01)', border: '1px dashed var(--border-glass)', padding: '0.65rem 0.85rem', borderRadius: '8px' }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-secondary)', textTransform: 'uppercase', marginBottom: '0.4rem', letterSpacing: '0.05em' }}>
+                  Interactive Video Chapters: Jump directly to questions
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  {activeVideo.bookmarks.map((bmark, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleJumpToBookmark(bmark.time)}
+                      className="btn"
+                      style={{
+                        fontSize: '0.68rem',
+                        padding: '0.25rem 0.5rem',
+                        background: 'rgba(6, 182, 212, 0.05)',
+                        borderColor: 'rgba(6, 182, 212, 0.2)',
+                        color: 'var(--text-primary)',
+                        borderRadius: '5px',
+                        cursor: 'pointer',
+                        transition: 'var(--transition-smooth)'
+                      }}
+                      title={`Jump to ${bmark.time}s`}
+                    >
+                      {bmark.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: '1rem', gap: '1rem' }}>
               <div>
@@ -372,7 +517,7 @@ export default function PrepVideos() {
                   {activeVideo.title}
                 </h2>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
-                  Published by <strong style={{ color: 'var(--text-primary)' }}>{activeVideo.channel}</strong>
+                  Stream Channel: <strong style={{ color: 'var(--text-primary)' }}>{useDirectPlayer ? 'ResuScreen CDN Network' : activeVideo.channel}</strong>
                 </p>
               </div>
               
