@@ -18,7 +18,6 @@ stages {
             checkout scm
 
             script {
-                echo "Building branch: ${BRANCH_NAME}"
                 echo "Build number: ${BUILD_NUMBER}"
             }
         }
