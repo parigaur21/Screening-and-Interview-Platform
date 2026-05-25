@@ -44,7 +44,32 @@ export function validateIsResume(text) {
   const lowerText = text.toLowerCase();
   const wordCount = text.trim().split(/\s+/).length;
 
-  // Count resume indicator matches
+  // 1. Explicitly check for Job Description characteristics
+  const jdKeywords = [
+    'job description', 'we are looking for', 'about the role', 'join our team', 
+    'ideal candidate', 'responsibilities:', 'requirements:', 'who we are', 'about us', 
+    'reporting to', 'competitive salary', 'apply for this position', 'candidate profile:',
+    'the role:', 'duties include', 'equal opportunity employer', 'position overview'
+  ];
+  
+  let jdHits = 0;
+  const matchedJdKeywords = [];
+  jdKeywords.forEach(keyword => {
+    if (lowerText.includes(keyword)) {
+      jdHits++;
+      matchedJdKeywords.push(keyword);
+    }
+  });
+
+  if (jdHits >= 2) {
+    return {
+      isResume: false,
+      confidence: 85,
+      reason: `This document appears to be a Job Description rather than a candidate resume (detected hiring indicators: ${matchedJdKeywords.slice(0, 3).map(k => `"${k}"`).join(', ')}). Please upload the candidate's actual resume or CV.`
+    };
+  }
+
+  // 2. Count standard resume indicator matches
   let resumeHits = 0;
   const matchedIndicators = [];
   RESUME_INDICATORS.forEach(keyword => {
@@ -54,7 +79,7 @@ export function validateIsResume(text) {
     }
   });
 
-  // Count non-resume indicator matches
+  // 3. Count non-resume indicator matches (invoices, receipts, recipes, medical sheets)
   let nonResumeHits = 0;
   const nonResumeMatches = [];
   NON_RESUME_INDICATORS.forEach(keyword => {

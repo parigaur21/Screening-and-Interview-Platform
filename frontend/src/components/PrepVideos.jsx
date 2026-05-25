@@ -257,6 +257,9 @@ export default function PrepVideos() {
   const [activeAccordion, setActiveAccordion] = useState(0);
   const [useDirectPlayer, setUseDirectPlayer] = useState(true);
 
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [videoError, setVideoError] = useState(false);
+
   const videoRef = useRef(null);
   const roles = ['All', ...new Set(mockVideos.map(v => v.role))];
 
@@ -268,9 +271,18 @@ export default function PrepVideos() {
   });
 
   const handleJumpToBookmark = (timeInSeconds) => {
-    if (videoRef.current) {
+    if (!isPlaying) {
+      setIsPlaying(true);
+      setUseDirectPlayer(true);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.currentTime = timeInSeconds;
+          videoRef.current.play().catch(err => console.log('Playback error:', err));
+        }
+      }, 100);
+    } else if (videoRef.current) {
       videoRef.current.currentTime = timeInSeconds;
-      videoRef.current.play();
+      videoRef.current.play().catch(err => console.log('Playback error:', err));
     }
   };
 
@@ -298,6 +310,8 @@ export default function PrepVideos() {
                 setSelectedRole(role);
                 setActiveVideo(found);
                 setActiveAccordion(0);
+                setIsPlaying(false);
+                setVideoError(false);
               }}
               className="btn"
               style={{
@@ -346,6 +360,8 @@ export default function PrepVideos() {
                   onClick={() => {
                     setActiveVideo(video);
                     setActiveAccordion(0);
+                    setIsPlaying(false);
+                    setVideoError(false);
                   }}
                   className="glass-card"
                   style={{
@@ -399,7 +415,10 @@ export default function PrepVideos() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border-glass)', paddingBottom: '0.75rem' }}>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button
-                  onClick={() => setUseDirectPlayer(true)}
+                  onClick={() => {
+                    setUseDirectPlayer(true);
+                    setVideoError(false);
+                  }}
                   className="btn"
                   style={{
                     fontSize: '0.7rem',
@@ -416,7 +435,10 @@ export default function PrepVideos() {
                   <Cpu size={14} /> ⚡ Play Inline Here (Direct CDN)
                 </button>
                 <button
-                  onClick={() => setUseDirectPlayer(false)}
+                  onClick={() => {
+                    setUseDirectPlayer(false);
+                    setVideoError(false);
+                  }}
                   className="btn"
                   style={{
                     fontSize: '0.7rem',
@@ -439,8 +461,161 @@ export default function PrepVideos() {
               </span>
             </div>
 
-            <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border-glass)', background: '#000' }}>
-              {useDirectPlayer ? (
+            <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border-glass)', background: '#090d16' }}>
+              
+              {/* STAGE 1: Stunning AI-Generated Image Poster Preview (Shown before playing) */}
+              {!isPlaying ? (
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  backgroundImage: 'url(/placeholder.png)',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  color: '#fff',
+                  textAlign: 'center',
+                  padding: '2rem'
+                }}>
+                  {/* Frosted Glass overlay to look incredibly premium */}
+                  <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    background: 'linear-gradient(180deg, rgba(9, 13, 22, 0.4) 0%, rgba(9, 13, 22, 0.85) 100%)',
+                    backdropFilter: 'blur(3px)',
+                    zIndex: 1
+                  }} />
+
+                  <div style={{ zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', maxWidth: '80%' }}>
+                    <div style={{
+                      width: '64px',
+                      height: '64px',
+                      borderRadius: '50%',
+                      background: 'rgba(99, 102, 241, 0.25)',
+                      border: '2px solid var(--color-primary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      boxShadow: '0 0 25px rgba(99, 102, 241, 0.6)',
+                      transition: 'transform 0.2s ease',
+                      animation: 'pulse 2.5s infinite'
+                    }}
+                    onClick={() => setIsPlaying(true)}
+                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    >
+                      <Play size={28} fill="currentColor" style={{ marginLeft: '4px', color: '#fff' }} />
+                    </div>
+
+                    <div>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 800, color: activeVideo.color, textTransform: 'uppercase', letterSpacing: '0.15em' }}>
+                        {activeVideo.role} Tutorial Session
+                      </span>
+                      <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginTop: '0.4rem', color: '#fff', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
+                        {activeVideo.title}
+                      </h3>
+                      <p style={{ fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.7)', marginTop: '0.5rem', maxWidth: '500px', marginInline: 'auto' }}>
+                        Ready to play in high-fidelity. View interactive cheatsheets, live topics, and model answers below.
+                      </p>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                      <button
+                        onClick={() => {
+                          setUseDirectPlayer(true);
+                          setIsPlaying(true);
+                        }}
+                        className="btn btn-primary"
+                        style={{ fontSize: '0.75rem', padding: '0.5rem 1rem', borderRadius: '6px' }}
+                      >
+                        Play Inline Stream
+                      </button>
+                      <a
+                        href={`https://www.youtube.com/watch?v=${activeVideo.embedUrl.split('/').pop()}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn"
+                        style={{ fontSize: '0.75rem', padding: '0.5rem 1rem', borderRadius: '6px', background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.15)', color: '#fff' }}
+                      >
+                        Open YouTube Directly
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              ) : videoError ? (
+                /* STAGE 2: Seamless Interactive Simulation & Visualizer fallback (If video fails to load) */
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  background: '#040711',
+                  fontFamily: 'monospace',
+                  color: '#38bdf8',
+                  padding: '1.5rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  border: '1px solid rgba(56, 189, 248, 0.2)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(56, 189, 248, 0.15)', paddingBottom: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Activity size={14} className="loading-spinner" style={{ color: activeVideo.color }} />
+                      <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: activeVideo.color }}>INTERACTIVE INTERVIEW RUNTIME SIMULATOR v1.0.8</span>
+                    </div>
+                    <span style={{ fontSize: '0.65rem', background: 'rgba(239, 68, 68, 0.1)', color: '#f87171', padding: '0.1rem 0.4rem', borderRadius: '3px' }}>CDN_LINK_OFFLINE</span>
+                  </div>
+
+                  <div style={{ flexGrow: 1, margin: '1rem 0', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.7rem', color: '#94a3b8' }}>
+                    <div style={{ color: '#38bdf8' }}>&gt;&gt;&gt; [INITIATING SIMULATED CODEBREAK WALKTHROUGH FOR ROLE: {activeVideo.role.toUpperCase()}]</div>
+                    <div>&gt;&gt;&gt; Loading technical modules: {activeVideo.topics.join(' | ')}</div>
+                    <div>&gt;&gt;&gt; Extracting command specs and architectural keys... OK</div>
+                    <div style={{ color: '#10b981', marginTop: '0.5rem' }}>&gt;&gt;&gt; RECOMMENDED PREPARATION: RUN THESE SIMULATOR COMMANDS BELOW IN YOUR TERMINAL</div>
+                    
+                    {activeVideo.technicalCheatsheet.commands.map((cmd, i) => (
+                      <div key={i} style={{ background: 'rgba(255,255,255,0.02)', padding: '0.4rem', borderRadius: '4px', borderLeft: `3px solid ${activeVideo.color}` }}>
+                        <div style={{ color: '#e2e8f0', fontWeight: 'bold' }}>$ {cmd.cmd}</div>
+                        <div style={{ color: '#64748b', fontSize: '0.65rem' }}># {cmd.desc}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ borderTop: '1px solid rgba(56, 189, 248, 0.15)', paddingTop: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.65rem', color: '#64748b' }}>Due to target CORS policies, static CDN simulation is running. You can launch full external video player:</span>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        onClick={() => {
+                          setVideoError(false);
+                          setUseDirectPlayer(false);
+                        }}
+                        className="btn"
+                        style={{ fontSize: '0.65rem', padding: '0.25rem 0.5rem', background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)', color: '#fff' }}
+                      >
+                        Try YouTube Iframe
+                      </button>
+                      <a
+                        href={`https://www.youtube.com/watch?v=${activeVideo.embedUrl.split('/').pop()}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn"
+                        style={{ fontSize: '0.65rem', padding: '0.25rem 0.5rem', background: 'rgba(99,102,241,0.2)', borderColor: 'var(--color-primary)', color: '#fff' }}
+                      >
+                        Launch Direct YouTube ↗
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              ) : useDirectPlayer ? (
                 /* Native HTML5 Player that allows zero redirect inline playing */
                 <video
                   ref={videoRef}
@@ -449,6 +624,10 @@ export default function PrepVideos() {
                   autoPlay
                   muted
                   playsInline
+                  onError={() => {
+                    console.log('Video direct load failed. Triggering simulator mode.');
+                    setVideoError(true);
+                  }}
                   style={{
                     position: 'absolute',
                     top: 0,
@@ -478,7 +657,8 @@ export default function PrepVideos() {
             </div>
 
             {/* Timestamps / Section Jump Links for Inline Video Player */}
-            {useDirectPlayer && activeVideo.bookmarks && (
+            {isPlaying && !videoError && useDirectPlayer && activeVideo.bookmarks && (
+
               <div style={{ marginTop: '0.85rem', background: 'rgba(255, 255, 255, 0.01)', border: '1px dashed var(--border-glass)', padding: '0.65rem 0.85rem', borderRadius: '8px' }}>
                 <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--color-secondary)', textTransform: 'uppercase', marginBottom: '0.4rem', letterSpacing: '0.05em' }}>
                   Interactive Video Chapters: Jump directly to questions

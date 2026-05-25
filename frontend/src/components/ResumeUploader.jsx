@@ -23,6 +23,30 @@ export default function ResumeUploader({ jobs, selectedJobId, setSelectedJobId, 
     'Writing fit scores to AWS RDS...'
   ];
 
+  const validateFile = (selectedFile) => {
+    if (!selectedFile) return false;
+    
+    const allowedExtensions = ['.txt', '.md', '.pdf', '.docx'];
+    const fileName = selectedFile.name.toLowerCase();
+    const isExtensionValid = allowedExtensions.some(ext => fileName.endsWith(ext));
+    
+    if (!isExtensionValid) {
+      setError('The uploaded file is not correct. Only PDF, Word (.docx), TXT, or MD documents are supported.');
+      setFile(null);
+      return false;
+    }
+    
+    const maxSizeBytes = 5 * 1024 * 1024; // 5MB
+    if (selectedFile.size > maxSizeBytes) {
+      setError('The uploaded file is not correct. File size exceeds the 5MB limit. Please upload a smaller file.');
+      setFile(null);
+      return false;
+    }
+    
+    setError('');
+    return true;
+  };
+
   const handleDrag = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -39,15 +63,21 @@ export default function ResumeUploader({ jobs, selectedJobId, setSelectedJobId, 
     setIsDragActive(false);
     
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setFile(e.dataTransfer.files[0]);
-      setError('');
+      const droppedFile = e.dataTransfer.files[0];
+      if (validateFile(droppedFile)) {
+        setFile(droppedFile);
+      }
     }
   };
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-      setError('');
+      const selectedFile = e.target.files[0];
+      if (validateFile(selectedFile)) {
+        setFile(selectedFile);
+      } else {
+        e.target.value = '';
+      }
     }
   };
 
@@ -85,7 +115,14 @@ export default function ResumeUploader({ jobs, selectedJobId, setSelectedJobId, 
         body: formData
       });
 
-      const result = await response.json();
+      const responseText = await response.text();
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseErr) {
+        result = { success: false, message: responseText || `Server responded with status ${response.status}: ${response.statusText}` };
+      }
+
       clearInterval(stageInterval);
 
       if (result.success) {

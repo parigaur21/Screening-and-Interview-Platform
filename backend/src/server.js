@@ -66,6 +66,27 @@ app.post('/api/interviews/start', interviewController.startInterviewSession);
 app.post('/api/interviews/respond', interviewController.submitCandidateResponse);
 app.get('/api/interviews/:candidateId', interviewController.getInterviewDetails);
 
+// Error handling middleware for Multer and general server errors
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        message: 'The uploaded file is not correct. File size exceeds the 5MB limit.'
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      message: `The uploaded file is not correct. Upload error: ${err.message}`
+    });
+  }
+  console.error('Unhandled Server Error:', err);
+  res.status(500).json({
+    success: false,
+    message: err.message || 'An unexpected server error occurred.'
+  });
+});
+
 // Start listening server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`===========================================================`);
