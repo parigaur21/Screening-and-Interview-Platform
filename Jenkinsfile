@@ -1,7 +1,6 @@
 pipeline {
 agent any
 
-```
 environment {
     DOCKER_COMPOSE_PATH = 'docker/docker-compose.yml'
     AWS_REGION = 'eu-north-1'
@@ -82,6 +81,6 @@ post {
         echo 'Pipeline execution finished'
     }
 }
-```
+
 
 }
