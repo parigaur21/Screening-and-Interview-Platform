@@ -42,8 +42,8 @@ stages {
     stage('Build Docker Images') {
         steps {
             sh '''
-                docker-compose -f docker/docker-compose.yml down || true
-                docker-compose -f docker/docker-compose.yml build
+                docker compose -f docker/docker-compose.yml down || true
+                docker compose -f docker/docker-compose.yml build
             '''
         }
     }
@@ -51,7 +51,7 @@ stages {
     stage('Deploy Application') {
         steps {
             sh '''
-                docker-compose -f docker/docker-compose.yml up -d
+                docker compose -f docker/docker-compose.yml up -d
             '''
         }
     }
