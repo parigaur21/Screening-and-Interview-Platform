@@ -17,6 +17,7 @@ stages {
     stage('Checkout') {
         steps {
             checkout scm
+
             script {
                 echo "Building branch: ${BRANCH_NAME}"
                 echo "Build number: ${BUILD_NUMBER}"
@@ -27,10 +28,7 @@ stages {
     stage('Backend Setup') {
         steps {
             dir('backend') {
-                script {
-                    echo 'Installing backend dependencies...'
-                    sh 'npm install'
-                }
+                sh 'npm install'
             }
         }
     }
@@ -38,67 +36,46 @@ stages {
     stage('Frontend Setup') {
         steps {
             dir('frontend') {
-                script {
-                    echo 'Installing frontend dependencies...'
-                    sh 'npm install'
-                }
+                sh 'npm install'
             }
         }
     }
 
     stage('Build Docker Images') {
         steps {
-            script {
-                echo 'Building Docker images...'
-
-                sh '''
-                    docker-compose -f docker/docker-compose.yml down || true
-                    docker-compose -f docker/docker-compose.yml build
-                '''
-
-                echo 'Docker images built successfully'
-            }
+            sh '''
+                docker-compose -f docker/docker-compose.yml down || true
+                docker-compose -f docker/docker-compose.yml build
+            '''
         }
     }
 
     stage('Deploy Application') {
         steps {
-            script {
-                echo 'Deploying application...'
-
-                sh '''
-                    docker-compose -f docker/docker-compose.yml up -d
-                '''
-
-                echo 'Deployment completed'
-            }
+            sh '''
+                docker-compose -f docker/docker-compose.yml up -d
+            '''
         }
     }
 
     stage('Smoke Tests') {
         steps {
-            script {
-                echo 'Running smoke tests...'
-
-                sh '''
-                    sleep 10
-                    curl -f http://localhost:3000 || exit 1
-                    curl -f http://localhost:5000 || exit 1
-                '''
-
-                echo 'Smoke tests passed'
-            }
+            sh '''
+                sleep 10
+                curl -f http://localhost:3000
+                curl -f http://localhost:5000
+            '''
         }
     }
 }
 
 post {
     success {
-        echo '✓ Pipeline completed successfully'
+        echo 'Pipeline completed successfully'
     }
 
     failure {
-        echo '✗ Pipeline failed'
+        echo 'Pipeline failed'
     }
 
     always {
