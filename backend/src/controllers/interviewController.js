@@ -52,7 +52,8 @@ export async function startInterviewSession(req, res) {
       if (lastAiMessages.length > 0) {
         initialQuestion = lastAiMessages[0].content;
       } else {
-        initialQuestion = await aiService.generateNextQuestion(candidate, { title: candidate.job_title, description: candidate.job_description }, [], 0);
+        const tone = req.body.tone || 'Strict Technical Lead';
+        initialQuestion = await aiService.generateNextQuestion(candidate, { title: candidate.job_title, description: candidate.job_description }, [], 0, tone);
         const msgId = `msg-${Date.now()}`;
         await db.execute(
           `INSERT INTO messages (id, interview_id, sender, content) VALUES ($1, $2, $3, $4)`,
@@ -75,7 +76,8 @@ export async function startInterviewSession(req, res) {
       );
 
       // Generate the initial interview question
-      initialQuestion = await aiService.generateNextQuestion(candidate, { title: candidate.job_title, description: candidate.job_description }, [], 0);
+      const tone = req.body.tone || 'Strict Technical Lead';
+      initialQuestion = await aiService.generateNextQuestion(candidate, { title: candidate.job_title, description: candidate.job_description }, [], 0, tone);
       const msgId = `msg-${Date.now()}`;
       await db.execute(
         `INSERT INTO messages (id, interview_id, sender, content) VALUES ($1, $2, $3, $4)`,
@@ -105,7 +107,7 @@ export async function startInterviewSession(req, res) {
  */
 export async function submitCandidateResponse(req, res) {
   try {
-    const { interviewId, answer } = req.body;
+    const { interviewId, answer, maxQuestions, tone } = req.body;
 
     if (!interviewId || !answer || answer.trim().length === 0) {
       return res.status(400).json({ success: false, message: 'interviewId and non-empty answer are required.' });
@@ -154,9 +156,9 @@ export async function submitCandidateResponse(req, res) {
 
     // 4. Progress index
     const nextQuestionIndex = session.current_question_index + 1;
-    const maxQuestions = 3; // Standard 3 rounds configuration
+    const resolvedMaxQuestions = parseInt(maxQuestions || '3');
 
-    if (nextQuestionIndex >= maxQuestions) {
+    if (nextQuestionIndex >= resolvedMaxQuestions) {
       // ===== Finalize Interview =====
       console.log(`🏁 AI Evaluation: Completing interview session ${interviewId}...`);
       
@@ -170,7 +172,7 @@ export async function submitCandidateResponse(req, res) {
       const avgScore = Math.round(totalScore / scoresList.length);
 
       // Generate a structured overall executive feedback
-      let finalFeedback = `Candidate completed all ${maxQuestions} interview stages. `;
+      let finalFeedback = `Candidate completed all ${resolvedMaxQuestions} interview stages. `;
       if (avgScore >= 75) {
         finalFeedback += `Demonstrated strong system architecture comprehension and excellent tool familiarity. Strong technical match.`;
       } else if (avgScore >= 50) {
@@ -224,7 +226,8 @@ export async function submitCandidateResponse(req, res) {
         { id: session.candidate_id, name: session.candidate_name, skills: session.candidate_skills, fit_score: session.fit_score, experience: session.experience },
         { title: session.job_title, description: session.job_description },
         chatHistory,
-        nextQuestionIndex
+        nextQuestionIndex,
+        tone || 'Strict Technical Lead'
       );
 
       // Save the new question

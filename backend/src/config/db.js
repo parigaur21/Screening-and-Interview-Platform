@@ -1,15 +1,16 @@
-  const createUsersTable = `
-    CREATE TABLE IF NOT EXISTS users (
-      id SERIAL PRIMARY KEY,
-      username VARCHAR(255) UNIQUE NOT NULL,
-      password VARCHAR(255) NOT NULL,
-      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-    );
-  `;
 import pg from 'pg';
 import sqlite3 from 'sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
+
+const createUsersTable = `
+  CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+  );
+`;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

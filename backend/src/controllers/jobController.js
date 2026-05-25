@@ -25,27 +25,51 @@ const SEED_JOBS = [
     location: 'San Francisco, CA',
     description: 'We are looking for an AI Engineer to design and integrate sophisticated Large Language Model architectures. You will construct pipeline services for custom document ingestion, configure vector embeddings, and coordinate cognitive chat agents.',
     requirements: 'Python, FastAPI, Gemini API, OpenAI API, LLMs, Vector Databases, Python, RAG architectures'
+  },
+  {
+    id: 'job-sre-004',
+    title: 'Lead Site Reliability Engineer (SRE)',
+    department: 'Operations & Reliability',
+    location: 'Austin, TX',
+    description: 'Lead operations resilience, configure advanced auto-scaling thresholds, establish system health monitoring dashboards, and design failover blueprints on distributed systems.',
+    requirements: 'Kubernetes, Prometheus, Grafana, Go, Bash, AWS CloudWatch, Linux, Incident Management'
+  },
+  {
+    id: 'job-frontend-005',
+    title: 'Frontend Platform Architect',
+    department: 'Core Product Engineering',
+    location: 'Remote, US',
+    description: 'Architect modular micro-frontend libraries, implement caching layers, build highly performant web rendering engines, and style sophisticated UI patterns for enterprise systems.',
+    requirements: 'React, Vite, CSS Grid, Webpack, TailwindCSS, TypeScript, NPM Monorepos, Chrome DevTools'
+  },
+  {
+    id: 'job-data-006',
+    title: 'Senior Data Platform Engineer',
+    department: 'AI & Data Science',
+    location: 'New York, NY (Hybrid)',
+    description: 'Construct robust data pipelines, establish Kafka event streams, optimize PostgreSQL index schemes, and design vector database infrastructure for high-throughput operational workloads.',
+    requirements: 'Python, PostgreSQL, Redis, Apache Kafka, Spark, SQL Optimization, Docker, System Design'
   }
 ];
 
-/**
- * Automatically seeds template jobs into the database if the database is empty.
- */
 export async function seedJobsIfEmpty() {
   try {
-    const existing = await db.query('SELECT COUNT(*) as count FROM jobs');
-    const count = parseInt(existing[0]?.count || existing[0]?.['COUNT(*)'] || '0');
-    
-    if (count === 0) {
-      console.log('🌱 Database: Seeding job postings...');
-      for (const job of SEED_JOBS) {
+    let seededCount = 0;
+    for (const job of SEED_JOBS) {
+      const existing = await db.query('SELECT COUNT(*) as count FROM jobs WHERE id = $1', [job.id]);
+      const count = parseInt(existing[0]?.count || existing[0]?.['count'] || existing[0]?.['COUNT(*)'] || '0');
+      
+      if (count === 0) {
         await db.execute(
           `INSERT INTO jobs (id, title, department, location, description, requirements)
            VALUES ($1, $2, $3, $4, $5, $6)`,
           [job.id, job.title, job.department, job.location, job.description, job.requirements]
         );
+        seededCount++;
       }
-      console.log('✅ Database: 3 template jobs seeded.');
+    }
+    if (seededCount > 0) {
+      console.log(`🌱 Database: Seeded ${seededCount} missing template jobs.`);
     }
   } catch (error) {
     console.error('❌ Failed to seed job postings:', error);

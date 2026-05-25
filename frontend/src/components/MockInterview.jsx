@@ -24,6 +24,28 @@ export default function MockInterview({ candidate, onFinishInterview, API_BASE_U
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
 
+  // Speak the question aloud if Voice Synthesis is enabled in settings
+  useEffect(() => {
+    if (currentQuestion && localStorage.getItem('enable_voice') === 'true') {
+      // Cancel any ongoing speaking
+      window.speechSynthesis?.cancel();
+      const utterance = new SpeechSynthesisUtterance(currentQuestion);
+      utterance.lang = localStorage.getItem('voice_lang') || 'en-US';
+      
+      if (window.speechSynthesis?.getVoices) {
+        const voices = window.speechSynthesis.getVoices();
+        const matchedVoice = voices.find(v => v.lang.startsWith(utterance.lang));
+        if (matchedVoice) {
+          utterance.voice = matchedVoice;
+        }
+      }
+      window.speechSynthesis?.speak(utterance);
+    }
+    return () => {
+      window.speechSynthesis?.cancel();
+    };
+  }, [currentQuestion]);
+
   // Start interview session automatically on load
   useEffect(() => {
     if (candidate) {
@@ -36,10 +58,17 @@ export default function MockInterview({ candidate, onFinishInterview, API_BASE_U
     setError('');
     
     try {
+      const tone = localStorage.getItem('interview_tone') || 'Strict Technical Lead';
+      const maxQuestions = localStorage.getItem('question_count') || '3';
+      
       const response = await fetch(`${API_BASE_URL}/interviews/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ candidateId: candidate.id })
+        body: JSON.stringify({ 
+          candidateId: candidate.id,
+          tone,
+          maxQuestions
+        })
       });
 
       const result = await response.json();
@@ -147,12 +176,17 @@ export default function MockInterview({ candidate, onFinishInterview, API_BASE_U
     setMessages(prev => [...prev, newCandidateMsg]);
 
     try {
+      const tone = localStorage.getItem('interview_tone') || 'Strict Technical Lead';
+      const maxQuestions = localStorage.getItem('question_count') || '3';
+
       const response = await fetch(`${API_BASE_URL}/interviews/respond`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           interviewId,
-          answer: cleanAnswer
+          answer: cleanAnswer,
+          tone,
+          maxQuestions
         })
       });
 
@@ -384,7 +418,7 @@ export default function MockInterview({ candidate, onFinishInterview, API_BASE_U
             </div>
             <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.25rem' }}>Cumulative Evaluation Score</h3>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>
-              {isCompleted ? 'Final Hiring Grade' : `Stage ${questionIndex} of 3`}
+              {isCompleted ? 'Final Hiring Grade' : `Stage ${questionIndex} of ${localStorage.getItem('question_count') || '3'}`}
             </p>
           </div>
 

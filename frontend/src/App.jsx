@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, FileText, ShieldAlert, Users, PlusCircle, HelpCircle, Briefcase, ChevronRight, Menu, Check } from 'lucide-react';
+import { LayoutDashboard, FileText, ShieldAlert, Users, PlusCircle, HelpCircle, Briefcase, ChevronRight, Menu, Check, Video, Settings as SettingsIcon } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import ResumeUploader from './components/ResumeUploader';
 import CandidateScreening from './components/CandidateScreening';
 import MockInterview from './components/MockInterview';
+import Settings from './components/Settings';
+import PrepVideos from './components/PrepVideos';
 import './styles/theme.css';
+import Background3D from './components/Background3D';
 import { useAuth } from './context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-
-const API_BASE_URL = "http://43.205.110.237:5000/api";
+import { API_BASE_URL } from './config';
 export default function App() {
   const { token, logout } = useAuth();
   const navigate = useNavigate();
@@ -164,6 +166,7 @@ export default function App() {
 
   return (
     <div className="app-container">
+      <Background3D />
       {/* Navigation Sidebar */}
       <aside className="sidebar">
         <div className="logo-section">
@@ -201,6 +204,20 @@ export default function App() {
           >
             <Users className="nav-icon" />
             <span>Candidates</span>
+          </li>
+          <li 
+            className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}
+            onClick={() => setActiveTab('settings')}
+          >
+            <SettingsIcon className="nav-icon" />
+            <span>System Settings</span>
+          </li>
+          <li 
+            className={`nav-item ${activeTab === 'prep' ? 'active' : ''}`}
+            onClick={() => setActiveTab('prep')}
+          >
+            <Video className="nav-icon" />
+            <span>Prep Videos</span>
           </li>
           {interviewCandidate && (
             <li 
@@ -277,6 +294,16 @@ export default function App() {
             }}
             API_BASE_URL={API_BASE_URL}
           />
+        )}
+
+        {activeTab === 'settings' && (
+          <Settings 
+            API_BASE_URL={API_BASE_URL}
+          />
+        )}
+
+        {activeTab === 'prep' && (
+          <PrepVideos />
         )}
       </main>
 

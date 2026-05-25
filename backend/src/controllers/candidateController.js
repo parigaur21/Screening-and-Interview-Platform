@@ -69,6 +69,22 @@ export async function uploadAndScreenCandidate(req, res) {
       return res.status(400).json({ success: false, message: 'Could not extract resume text. Please provide valid text content.' });
     }
 
+    // ===== DOCUMENT TYPE VALIDATION =====
+    // Ensure uploaded content is actually a resume/CV before spending AI resources
+    const validation = aiService.validateIsResume(resumeText);
+    if (!validation.isResume) {
+      console.warn(`⚠️ Document rejected (not a resume): confidence=${validation.confidence}% — ${validation.reason}`);
+      return res.status(400).json({
+        success: false,
+        message: validation.reason,
+        validation: {
+          isResume: false,
+          confidence: validation.confidence
+        }
+      });
+    }
+    console.log(`✅ Document validated as resume (confidence: ${validation.confidence}%) — ${validation.reason}`);
+
     // Trigger the AI screen parser
     console.log(`🧠 AI Screening: Analyzing resume for ${name} against job "${job.title}"...`);
     const screening = await aiService.screenResume(resumeText, job.requirements + '\n' + job.description);

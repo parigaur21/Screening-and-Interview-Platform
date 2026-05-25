@@ -10,6 +10,97 @@ const SKILL_CATALOG = [
   'ci/cd', 'devops', 'machine learning', 'data science', 'ai', 'html', 'css', 'graphql'
 ];
 
+// Resume/CV indicator keywords — documents must contain enough of these to be classified as a resume
+const RESUME_INDICATORS = [
+  'experience', 'education', 'skills', 'projects', 'work history', 'employment',
+  'objective', 'summary', 'profile', 'certifications', 'achievements', 'references',
+  'resume', 'curriculum vitae', 'cv', 'qualification', 'professional', 'internship',
+  'university', 'degree', 'bachelor', 'master', 'phd', 'gpa', 'contact',
+  'phone', 'email', 'linkedin', 'github', 'portfolio', 'responsibilities',
+  'technical skills', 'soft skills', 'languages', 'awards', 'publications',
+  'volunteer', 'extracurricular', 'hobbies', 'interests'
+];
+
+// Non-resume indicator keywords — if too many of these appear, it's likely NOT a resume
+const NON_RESUME_INDICATORS = [
+  'invoice', 'receipt', 'purchase order', 'payment', 'total amount', 'tax',
+  'chapter 1', 'chapter 2', 'table of contents', 'abstract', 'introduction',
+  'bibliography', 'footnote', 'recipe', 'ingredients', 'preheat',
+  'dear sir', 'dear madam', 'sincerely yours', 'to whom it may concern',
+  'terms and conditions', 'privacy policy', 'license agreement', 'warranty',
+  'balance sheet', 'profit and loss', 'fiscal year', 'quarterly report',
+  'patient name', 'diagnosis', 'prescription', 'dosage', 'medical record'
+];
+
+/**
+ * Validates whether the provided text content is actually a resume/CV.
+ * Returns { isResume: boolean, confidence: number, reason: string }
+ */
+export function validateIsResume(text) {
+  if (!text || text.trim().length < 50) {
+    return { isResume: false, confidence: 0, reason: 'Document is too short to be a valid resume. Please upload a complete CV/resume.' };
+  }
+
+  const lowerText = text.toLowerCase();
+  const wordCount = text.trim().split(/\s+/).length;
+
+  // Count resume indicator matches
+  let resumeHits = 0;
+  const matchedIndicators = [];
+  RESUME_INDICATORS.forEach(keyword => {
+    if (lowerText.includes(keyword)) {
+      resumeHits++;
+      matchedIndicators.push(keyword);
+    }
+  });
+
+  // Count non-resume indicator matches
+  let nonResumeHits = 0;
+  const nonResumeMatches = [];
+  NON_RESUME_INDICATORS.forEach(keyword => {
+    if (lowerText.includes(keyword)) {
+      nonResumeHits++;
+      nonResumeMatches.push(keyword);
+    }
+  });
+
+  // Decision logic
+  // If non-resume indicators dominate, reject
+  if (nonResumeHits >= 3 && nonResumeHits > resumeHits) {
+    return {
+      isResume: false,
+      confidence: Math.min(90, nonResumeHits * 15),
+      reason: `This document appears to be a non-resume document (detected: ${nonResumeMatches.slice(0, 3).join(', ')}). Please upload a valid resume or CV.`
+    };
+  }
+
+  // If very few resume indicators found
+  if (resumeHits < 3 && wordCount > 100) {
+    return {
+      isResume: false,
+      confidence: 60,
+      reason: `This document does not contain enough resume-related content (found only: ${matchedIndicators.join(', ') || 'none'}). A valid resume should include sections like Experience, Skills, Education, etc.`
+    };
+  }
+
+  // If document is very short and has minimal resume indicators
+  if (resumeHits < 2 && wordCount < 100) {
+    return {
+      isResume: false,
+      confidence: 50,
+      reason: 'The uploaded content is too brief and lacks resume structure. Please upload a complete resume/CV with your experience, skills, and education.'
+    };
+  }
+
+  // Passed validation
+  const confidence = Math.min(95, 40 + resumeHits * 5);
+  return {
+    isResume: true,
+    confidence,
+    reason: `Document validated as resume/CV (matched ${resumeHits} resume indicators: ${matchedIndicators.slice(0, 5).join(', ')}).`
+  };
+}
+
 /**
  * Parses and evaluates resume text against job requirements.
  */
@@ -114,18 +205,18 @@ export async function screenResume(resumeText, jobDescription) {
 /**
  * Generates an interview question based on resume skills and progress.
  */
-export async function generateNextQuestion(candidate, job, prevMessages = [], questionIndex = 0) {
+export async function generateNextQuestion(candidate, job, prevMessages = [], questionIndex = 0, tone = 'Strict Technical Lead') {
 
   if (process.env.GEMINI_API_KEY) {
     try {
-      return await generateNextQuestionWithGemini(candidate, job, prevMessages, questionIndex);
+      return await generateNextQuestionWithGemini(candidate, job, prevMessages, questionIndex, tone);
     } catch (error) {
       console.warn('Gemini question generation failed, falling back to OpenAI/local:', error.message);
     }
   }
   if (process.env.OPENAI_API_KEY) {
     try {
-      return await generateNextQuestionWithOpenAI(candidate, job, prevMessages, questionIndex);
+      return await generateNextQuestionWithOpenAI(candidate, job, prevMessages, questionIndex, tone);
     } catch (error) {
       console.warn('OpenAI question generation failed, falling back to local simulator:', error.message);
     }
@@ -154,7 +245,6 @@ export async function generateNextQuestion(candidate, job, prevMessages = [], qu
  * Evaluates candidate responses to provide constructive score and review feedback.
  */
 export async function evaluateAnswer(question, answer, candidateSkills = '') {
-
   if (process.env.GEMINI_API_KEY) {
     try {
       return await evaluateAnswerWithGemini(question, answer);
@@ -169,74 +259,6 @@ export async function evaluateAnswer(question, answer, candidateSkills = '') {
       console.warn('OpenAI answer evaluation failed, falling back to local evaluator:', error.message);
     }
   }
-// ==================== OpenAI API Integrations ====================
-
-async function screenResumeWithOpenAI(resumeText, jobDescription) {
-  const url = 'https://api.openai.com/v1/chat/completions';
-  const prompt = `You are an expert AI Technical Recruiter. Screen the following resume text against the job description.\n\nJob Description:\n${jobDescription}\n\nResume Text:\n${resumeText}\n\nReturn your response strictly in the following JSON format:\n{\n  "skills": "Comma-separated list of top matched technical skills",\n  "experience": "Estimated years of professional experience as an integer",\n  "fitScore": "Matching score between 10 and 100 representing job alignment",\n  "summary": "Concise 3-sentence summary covering background fit, gaps, and recommendations"\n}`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
-    },
-    body: JSON.stringify({
-      model: 'gpt-3.5-turbo',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.2
-    })
-  });
-  const data = await response.json();
-  const text = data.choices?.[0]?.message?.content || '{}';
-  try {
-    return JSON.parse(text);
-  } catch {
-    return { summary: text, skills: '', experience: 0, fitScore: 50 };
-  }
-}
-
-async function generateNextQuestionWithOpenAI(candidate, job, prevMessages = [], questionIndex = 0) {
-  const url = 'https://api.openai.com/v1/chat/completions';
-  const prompt = `You are an AI technical interviewer. Given the candidate profile and job description, generate a technical interview question for round ${questionIndex + 1}.\n\nCandidate: ${JSON.stringify(candidate)}\nJob: ${JSON.stringify(job)}\n\nReturn only the question text.`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
-    },
-    body: JSON.stringify({
-      model: 'gpt-3.5-turbo',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.3
-    })
-  });
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content || 'Describe a technical challenge you solved.';
-}
-
-async function evaluateAnswerWithOpenAI(question, answer, candidateSkills = '') {
-  const url = 'https://api.openai.com/v1/chat/completions';
-  const prompt = `You are an AI technical interviewer. Given the question, candidate answer, and their skills, provide a JSON with a score (30-98) and a short feedback string.\n\nQuestion: ${question}\nAnswer: ${answer}\nSkills: ${candidateSkills}\n\nReturn JSON: { "score": 0, "feedback": "..." }`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
-    },
-    body: JSON.stringify({
-      model: 'gpt-3.5-turbo',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.2
-    })
-  });
-  const data = await response.json();
-  const text = data.choices?.[0]?.message?.content || '{}';
-  try {
-    return JSON.parse(text);
-  } catch {
-    return { score: 50, feedback: text };
-  }
-}
 
   const ans = answer.toLowerCase();
   let score = 50; // Starting baseline
@@ -284,6 +306,75 @@ async function evaluateAnswerWithOpenAI(question, answer, candidateSkills = '') 
   };
 }
 
+// ==================== OpenAI API Integrations ====================
+
+async function screenResumeWithOpenAI(resumeText, jobDescription) {
+  const url = 'https://api.openai.com/v1/chat/completions';
+  const prompt = `You are an expert AI Technical Recruiter. Screen the following resume text against the job description.\n\nJob Description:\n${jobDescription}\n\nResume Text:\n${resumeText}\n\nReturn your response strictly in the following JSON format:\n{\n  "skills": "Comma-separated list of top matched technical skills",\n  "experience": "Estimated years of professional experience as an integer",\n  "fitScore": "Matching score between 10 and 100 representing job alignment",\n  "summary": "Concise 3-sentence summary covering background fit, gaps, and recommendations"\n}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: 'gpt-3.5-turbo',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.2
+    })
+  });
+  const data = await response.json();
+  const text = data.choices?.[0]?.message?.content || '{}';
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { summary: text, skills: '', experience: 0, fitScore: 50 };
+  }
+}
+
+async function generateNextQuestionWithOpenAI(candidate, job, prevMessages = [], questionIndex = 0, tone = 'Strict Technical Lead') {
+  const url = 'https://api.openai.com/v1/chat/completions';
+  const prompt = `You are an AI technical interviewer acting as a: "${tone}". Given the candidate profile and job description, generate a technical interview question for round ${questionIndex + 1}.\n\nCandidate: ${JSON.stringify(candidate)}\nJob: ${JSON.stringify(job)}\n\nReturn only the question text aligned with your interviewer persona tone.`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: 'gpt-3.5-turbo',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.3
+    })
+  });
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || 'Describe a technical challenge you solved.';
+}
+
+async function evaluateAnswerWithOpenAI(question, answer, candidateSkills = '') {
+  const url = 'https://api.openai.com/v1/chat/completions';
+  const prompt = `You are an AI technical interviewer. Given the question, candidate answer, and their skills, provide a JSON with a score (30-98) and a short feedback string.\n\nQuestion: ${question}\nAnswer: ${answer}\nSkills: ${candidateSkills}\n\nReturn JSON: { "score": 0, "feedback": "..." }`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: 'gpt-3.5-turbo',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.2
+    })
+  });
+  const data = await response.json();
+  const text = data.choices?.[0]?.message?.content || '{}';
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { score: 50, feedback: text };
+  }
+}
+
 // ==================== Live Gemini API Integrations ====================
 
 async function screenResumeWithGemini(resumeText, jobDescription) {
@@ -325,13 +416,14 @@ async function screenResumeWithGemini(resumeText, jobDescription) {
   return JSON.parse(rawText.trim());
 }
 
-async function generateNextQuestionWithGemini(candidate, job, prevMessages, questionIndex) {
+async function generateNextQuestionWithGemini(candidate, job, prevMessages, questionIndex, tone = 'Strict Technical Lead') {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
   
   const conversationContext = prevMessages.map(msg => `${msg.sender}: ${msg.content}`).join('\n');
 
   const prompt = `
     You are conducting a technical interview for the job: "${job.title}".
+    Your interviewer persona tone is: "${tone}". Keep all your questions aligned with this personality context.
     Job Description: ${job.description}
     Candidate Profile:
     - Name: ${candidate.name}
@@ -343,7 +435,7 @@ async function generateNextQuestionWithGemini(candidate, job, prevMessages, ques
     Here is the history of the conversation so far:
     ${conversationContext}
     
-    Formulate the next challenging technical question. Tailor it to the candidate's skills and the job requirements. Keep it professional, encouraging, yet technically deep.
+    Formulate the next challenging technical question. Tailor it to the candidate's skills and the job requirements. Keep it professional, yet aligned with your tone persona.
     Return ONLY the question text. Do not write any greetings or side commentary.
   `;
 

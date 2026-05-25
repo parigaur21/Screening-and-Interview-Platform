@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
+import { API_BASE_URL } from '../config';
 
 const AuthContext = createContext();
 
@@ -7,7 +8,7 @@ export function AuthProvider({ children }) {
 
   const login = async (username, password) => {
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
@@ -27,7 +28,7 @@ export function AuthProvider({ children }) {
 
   const signup = async (username, password) => {
     try {
-      const res = await fetch('/api/auth/register', {
+      const res = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
