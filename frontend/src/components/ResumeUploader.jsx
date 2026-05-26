@@ -109,32 +109,32 @@ export default function ResumeUploader({ jobs, selectedJobId, setSelectedJobId, 
       formData.append('email', email);
       formData.append('jobId', selectedJobId);
       formData.append('resume', file);
-
       const response = await fetch(`${API_BASE_URL}/candidates`, {
         method: 'POST',
         body: formData
       });
 
-      const responseText = await response.text();
+      // Parse JSON response, fallback to text if not JSON
       let result;
       try {
-        result = JSON.parse(responseText);
+        result = await response.json();
       } catch (parseErr) {
-        result = { success: false, message: responseText || `Server responded with status ${response.status}: ${response.statusText}` };
+        const text = await response.text();
+        result = { success: false, message: text || `Server responded with status ${response.status}: ${response.statusText}` };
       }
 
       clearInterval(stageInterval);
 
-      if (result.success) {
+      if (response.ok && result.success) {
+        // Successful upload and screening
         setSuccess(true);
         setName('');
         setEmail('');
         setFile(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
-        
-        // Trigger parent dashboard reload
         onScreenComplete(result.data);
       } else {
+        // Show specific error message from backend or generic fallback
         setError(result.message || 'Failed to analyze resume.');
       }
     } catch (err) {
